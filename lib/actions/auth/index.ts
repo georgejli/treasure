@@ -14,6 +14,8 @@ import {
 } from "@/lib/helpers/auth";
 import { sendWelcomeEmail } from "../emails";
 
+// test george
+
 interface SignUpForm {
   email: string;
   firstName: string;
