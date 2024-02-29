@@ -58,7 +58,6 @@ const handleTicketPurchase = async (
       .insert({ attendee_id: user_id, event_id, ticket_id })
       .select();
 
-  console.log(purchasedTicketData, purchasedTicketError);
   if (!purchasedTicketData || purchasedTicketError) {
     return NextResponse.json({
       message: "Error",
