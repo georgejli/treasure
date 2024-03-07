@@ -9,14 +9,8 @@ import { likeEvent, unlikeEvent } from "@/lib/actions/events";
 import { Tables } from "@/types/supabase";
 import FilledHeartIcon from "@/components/icons/FilledHeartIcon";
 import HeartIcon from "@/components/icons/HeartIcon";
+import LoginFlowDialog from "@/components/ui/custom/login-flow-dialog";
 
-/**
- * The LikeButton component allows a user to like or unlike an event.
- * It shows a filled heart icon if the event is liked, and an empty heart icon otherwise.
- *
- * @param {EventDisplayData | Tables<"events">} event - The event data.
- * @param {User | null} user - The current user.
- */
 export default function LikeButton({
   event,
   user,
@@ -24,6 +18,8 @@ export default function LikeButton({
   event: EventDisplayData | Tables<"events">;
   user?: User | null;
 }) {
+  const queryClient = useQueryClient();
+  const { push } = useRouter();
   const { data } = useQuery({
     queryKey: ["event_liked", event.id],
     queryFn: async () => {
@@ -36,18 +32,20 @@ export default function LikeButton({
         .eq("user_id", user.id);
       return likedEvents && likedEvents.length > 0;
     },
+    enabled: !!user,
   });
 
-  const queryClient = useQueryClient();
-  const { push } = useRouter();
+  const handleOptimisticUpdate = (liked: boolean) => {
+    queryClient.setQueryData(["event_liked", event.id], liked);
+  };
 
   const handleLike = async () => {
     if (!user) {
       push(`/login?event=${event.cleaned_name}`);
       return;
     }
-    // Optimistically update the UI
-    queryClient.setQueryData(["event_liked", event.id], true);
+
+    handleOptimisticUpdate(true);
     await likeEvent(event.id, user.id);
     queryClient.invalidateQueries({ queryKey: ["event_liked", event.id] });
   };
@@ -57,11 +55,17 @@ export default function LikeButton({
       push(`/login?event=${event.cleaned_name}`);
       return;
     }
-    // Optimistically update the UI
-    queryClient.setQueryData(["event_liked", event.id], false);
+
+    handleOptimisticUpdate(false);
     await unlikeEvent(event.id, user.id);
     queryClient.invalidateQueries({ queryKey: ["event_liked", event.id] });
   };
+
+  const loginDialogTrigger = (
+    <div className="hover:cursor-pointer">
+      <HeartIcon />
+    </div>
+  );
 
   return data ? (
     <div
@@ -70,12 +74,14 @@ export default function LikeButton({
     >
       <FilledHeartIcon />
     </div>
-  ) : (
+  ) : user ? (
     <div
       onClick={async () => await handleLike()}
       className="flex-shrink-0 hover:cursor-pointer"
     >
       <HeartIcon />
     </div>
+  ) : (
+    <LoginFlowDialog trigger={loginDialogTrigger} />
   );
 }
